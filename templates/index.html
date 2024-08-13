@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security IA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #0066cc;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #0066cc;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background-color: #004999;
+        }
+        img {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Security IA</h1>
+    <h2>Detecção de Bebê</h2>
+    <img src="{{ url_for('video_feed') }}" width="1270" height="720" />
+    <div class="controls">
+        <button onclick="togglePause()">Pausar/Despausar</button>
+        <button onclick="toggleAlarme()">Desativar/Ativar Alarme</button>
+    </div>
+
+    <script>
+        function togglePause() {
+            fetch('/toggle_pause')
+                .then(response => response.json())
+                .then(data => console.log(data));
+        }
+
+        function toggleAlarme() {
+            fetch('/toggle_alarme')
+                .then(response => response.json())
+                .then(data => console.log(data));
+        }
+    </script>
+</body>
+</html>
