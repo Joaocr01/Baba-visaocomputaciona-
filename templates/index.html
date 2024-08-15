@@ -7,21 +7,54 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            text-align: center;
+            background-color: #003366; /* Azul escuro */
+            color: #f4f4f4; /* Cor do texto clara para contraste */
             padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            min-height: 100vh;
         }
-        h1 {
-            color: #0066cc;
+        .info {
+            width: 30%;
+            padding: 20px;
+            background-color: #004080; /* Azul médio para destaque */
+            border-radius: 10px;
+        }
+        .info h1 {
+            color: #f4f4f4;
             margin-bottom: 20px;
         }
-        .controls {
+        .info p, .info ul {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .info ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        .info .authors {
             margin-top: 20px;
+            font-style: italic;
+            font-weight: bold;
+            color: #f0f0f0;
+        }
+        .video-container {
+            width: 65%;
+        }
+        .video-container img {
+            border: 1px solid #ccc;
+            width: 100%;
+            height: auto;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            margin-left: 20px;
         }
         .controls button {
             padding: 10px 20px;
-            margin: 10px;
+            margin: 10px 0;
             font-size: 16px;
             color: #fff;
             background-color: #0066cc;
@@ -32,18 +65,39 @@
         .controls button:hover {
             background-color: #004999;
         }
-        img {
-            border: 1px solid #ccc;
-        }
     </style>
 </head>
 <body>
-    <h1>Security IA</h1>
-    <h2>Detecção de Bebê</h2>
-    <img src="{{ url_for('video_feed') }}" width="1270" height="720" />
+    <div class="info">
+        <h1>Security IA</h1>
+        <p><strong>Projeto:</strong> Security IA é um sistema de monitoramento que utiliza inteligência artificial para detectar a presença de bebês em áreas específicas. O sistema usa visão computacional para analisar vídeo em tempo real e emitir um alarme se um bebê for detectado em uma área de interesse.</p>
+        <p><strong>Funcionalidades:</strong></p>
+        <ul>
+            <li>Detecção de bebês usando um modelo treinado de YOLO.</li>
+            <li>Emissão de alerta sonoro quando um bebê é detectado.</li>
+            <li>Controle para pausar/despausar o vídeo e ativar/desativar o alarme.</li>
+        </ul>
+        <p><strong>Código e Bibliotecas:</strong></p>
+        <ul>
+            <li><strong>Flask:</strong> Um framework para criar aplicações web em Python. Usado para criar a interface web e lidar com solicitações HTTP.</li>
+            <li><strong>OpenCV:</strong> Biblioteca de visão computacional que fornece funções para processamento de vídeo e imagens. Usada para capturar o vídeo e processar os frames.</li>
+            <li><strong>Ultralytics YOLO:</strong> Implementação do algoritmo YOLO (You Only Look Once) para detecção de objetos em imagens e vídeos.</li>
+            <li><strong>Pygame:</strong> Biblioteca para criação de jogos e manipulação de áudio. Usada para tocar o som do alarme.</li>
+            <li><strong>Threading:</strong> Módulo para criar e gerenciar threads em Python. Usado para executar o alarme em uma thread separada.</li>
+        </ul>
+        <div class="authors">
+            <p><strong>Autores:</strong> João Carlos e Luiz Henrique</p>
+            <p><strong>Disciplina:</strong> Introdução à Inteligência Artificial</p>
+            <p><strong>Professor:</strong> Matheus Colto</p>
+        </div>
+    </div>
+    <div class="video-container">
+        <img src="{{ url_for('video_feed') }}" alt="Security IA Video Feed" />
+    </div>
     <div class="controls">
         <button onclick="togglePause()">Pausar/Despausar</button>
-        <button onclick="toggleAlarme()">Desativar/Ativar Alarme</button>
+        <button onclick="restartVideo()">Recomeçar Vídeo</button>
+        <p id="status" style="color: #f4f4f4; font-size: 18px; font-weight: bold;"></p>
     </div>
 
     <script>
@@ -55,6 +109,15 @@
 
         function toggleAlarme() {
             fetch('/toggle_alarme')
+                .then(response => response.json())
+                .then(data => {
+                    const status = data.alarmeAtivado ? "Ativado" : "Desativado";
+                    document.getElementById('status').textContent = `Alarme: ${status}`;
+                });
+        }
+
+        function restartVideo() {
+            fetch('/restart_video')
                 .then(response => response.json())
                 .then(data => console.log(data));
         }

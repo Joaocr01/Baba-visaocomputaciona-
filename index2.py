@@ -3,6 +3,7 @@ import cv2
 from ultralytics import YOLO
 import threading
 import winsound
+import time
 
 app = Flask(__name__)
 
@@ -17,13 +18,27 @@ area = [430, 240, 930, 280]
 # Variáveis de controle do alarme e de pausa
 alarmeAtivado = False
 paused = False
-alarmeDesativado = False
+alarmeDesativado = True  # Inicialmente o alarme está desativado
 alarmeThread = None
+alarmeLock = threading.Lock()
+
+# Obter FPS do vídeo
+fps = video.get(cv2.CAP_PROP_FPS)
+
+# Definir a quantidade de frames a serem pulados
+frames_pular = 10
 
 def alarme_continuo():
     global alarmeDesativado
-    while not alarmeDesativado:
-        winsound.Beep(2500, 1000)
+    while True:
+        with alarmeLock:
+            if alarmeDesativado:
+                break
+        if not paused:
+            winsound.Beep(1500, 400)
+            time.sleep(0.5)  # Intervalo entre os toques do alarme
+        else:
+            time.sleep(0.1)  # Evita uso excessivo de CPU enquanto está pausado
 
 @app.route('/')
 def index():
@@ -39,25 +54,46 @@ def toggle_pause():
 def toggle_alarme():
     global alarmeAtivado, alarmeDesativado, alarmeThread
 
-    if alarmeAtivado:
-        alarmeDesativado = True
-        alarmeAtivado = False
-        if alarmeThread:
-            alarmeThread.join()  # Aguarda a thread do alarme parar
-    else:
-        alarmeDesativado = False
+    with alarmeLock:
+        if alarmeAtivado:
+            alarmeDesativado = True
+            if alarmeThread:
+                alarmeThread.join()  # Aguarda a thread do alarme parar
+            alarmeAtivado = False
+            return jsonify({"alarmeAtivado": alarmeAtivado})
 
-    return jsonify({"alarmeAtivado": alarmeAtivado})
+        else:
+            alarmeDesativado = False
+            alarmeAtivado = True
+            alarmeThread = threading.Thread(target=alarme_continuo, daemon=True)
+            alarmeThread.start()
+            return jsonify({"alarmeAtivado": alarmeAtivado})
+
+@app.route('/restart_video')
+def restart_video():
+    global video, alarmeAtivado, alarmeDesativado, alarmeThread, paused
+
+    video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+    # Reiniciar o alarme se estiver ativado
+    with alarmeLock:
+        if alarmeAtivado:
+            alarmeDesativado = True
+            if alarmeThread:
+                alarmeThread.join()
+            alarmeAtivado = False
+
+    # Garantir que o vídeo não esteja pausado ao reiniciar
+    paused = False
+
+    return jsonify({"status": "video restarted", "alarmeAtivado": alarmeAtivado})
 
 def gerar_frames():
-    global alarmeAtivado, paused, alarmeDesativado, alarmeThread
+    global alarmeAtivado, paused, alarmeDesativado
 
     while True:
         if paused:
-            if alarmeAtivado:
-                alarmeDesativado = True  # Desativa o alarme se o vídeo estiver pausado
-                if alarmeThread:
-                    alarmeThread.join()
+            time.sleep(0.1)  # Evita uso excessivo de CPU enquanto está pausado
             continue
 
         check, img = video.read()
@@ -65,6 +101,10 @@ def gerar_frames():
             # Reiniciar o vídeo
             video.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
+
+        # Pular frames para acelerar o vídeo
+        for _ in range(frames_pular):
+            video.grab()
 
         # Redimensionar a imagem para o tamanho desejado
         img = cv2.resize(img, (1270, 720))
@@ -100,11 +140,13 @@ def gerar_frames():
                         bebeDentroDaArea = True
 
         # Se o bebê foi detectado dentro da área, iniciar o alarme contínuo e alterar a exibição
-        if bebeDentroDaArea and not paused and not alarmeDesativado:
+        if bebeDentroDaArea and not paused:
             if not alarmeAtivado:
-                alarmeAtivado = True
-                alarmeThread = threading.Thread(target=alarme_continuo, daemon=True)
-                alarmeThread.start()
+                with alarmeLock:
+                    alarmeDesativado = False
+                    alarmeAtivado = True
+                    alarmeThread = threading.Thread(target=alarme_continuo, daemon=True)
+                    alarmeThread.start()
 
         # Se o alarme estiver ativado, exibir os elementos em vermelho e a mensagem
         if alarmeAtivado:
